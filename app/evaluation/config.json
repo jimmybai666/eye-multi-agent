@@ -1,0 +1,88 @@
+{
+  "tasks": [
+    {
+      "task_id": "glaucoma_detection",
+      "task_name": "Glaucoma Detection",
+      "dataset_dir": "datasets/refuge2_glaucoma",
+      "image_type": "a fundus image",
+      "num_classes": 2,
+      "labels": ["GLAUCOMA", "NON-GLAUCOMA"],
+      "folder_to_label": {
+        "glaucoma": "GLAUCOMA",
+        "normal": "NON-GLAUCOMA"
+      },
+      "prompt": "This is a fundus image. Based on the image, please tell me whether this image contains glaucoma, then give justifications. Follow the format: GLAUCOMA / NON-GLAUCOMA; Explanation: <JUSTIFICATION>."
+    },
+    {
+      "task_id": "macular_hole_staging",
+      "task_name": "Macular Hole Staging",
+      "dataset_dir": "datasets/oimhs_Macular_hole_stage",
+      "image_type": "an OCT image",
+      "num_classes": 4,
+      "labels": ["1", "2", "3", "4"],
+      "folder_to_label": {
+        "stage_1": "1",
+        "stage_2": "2",
+        "stage_3": "3",
+        "stage_4": "4"
+      },
+      "prompt": "This is an OCT image. Based on the image, please tell me the stage of the macular hole, then give justifications. Follow the format: Stage: <AN INTEGER from 1 to 4>; Explanation: <JUSTIFICATION>."
+    },
+    {
+      "task_id": "dr_grading",
+      "task_name": "Diabetic Retinopathy Grading",
+      "dataset_dir": "datasets/idrid_dr_grade",
+      "image_type": "a fundus image",
+      "num_classes": 5,
+      "labels": ["0", "1", "2", "3", "4"],
+      "folder_to_label": {
+        "grade_0": "0",
+        "grade_1": "1",
+        "grade_2": "2",
+        "grade_3": "3",
+        "grade_4": "4"
+      },
+      "prompt": "This is a fundus image. Based on the image, please tell me the grade of diabetic retinopathy (DR), then give justifications. The grading scale is: 0 (No DR), 1 (Mild NPDR), 2 (Moderate NPDR), 3 (Severe NPDR), 4 (Proliferative DR). Follow the format: Grade: <AN INTEGER from 0 to 4>; Explanation: <JUSTIFICATION>."
+    },
+    {
+      "task_id": "macular_edema_risk",
+      "task_name": "Risk of Macular Edema",
+      "dataset_dir": "datasets/idrid_edema_risk",
+      "image_type": "a fundus image",
+      "num_classes": 3,
+      "labels": ["0", "1", "2"],
+      "folder_to_label": {
+        "risk_0": "0",
+        "risk_1": "1",
+        "risk_2": "2"
+      },
+      "prompt": "This is a fundus image. Based on the image, please tell me the risk level of macular edema, then give justifications. The risk scale is: 0 (No risk), 1 (At risk), 2 (Macular edema present). Follow the format: Risk: <AN INTEGER from 0 to 2>; Explanation: <JUSTIFICATION>."
+    },
+    {
+      "task_id": "cataract_detection",
+      "task_name": "Cataract Detection",
+      "dataset_dir": "datasets/cataract",
+      "image_type": "an eye RGB image",
+      "num_classes": 2,
+      "labels": ["CATARACT", "NORMAL"],
+      "folder_to_label": {
+        "cataract": "CATARACT",
+        "normal": "NORMAL"
+      },
+      "prompt": "This is an eye RGB image. Based on the image, please tell me whether this image shows cataract, then give justifications. Follow the format: CATARACT / NORMAL; Explanation: <JUSTIFICATION>."
+    },
+    {
+      "task_id": "amd_detection",
+      "task_name": "Age-related Macular Degeneration Detection",
+      "dataset_dir": "datasets/adam_amd",
+      "image_type": "a fundus image",
+      "num_classes": 2,
+      "labels": ["AMD", "NON-AMD"],
+      "folder_to_label": {
+        "amd": "AMD",
+        "non_amd": "NON-AMD"
+      },
+      "prompt": "This is a fundus image. Based on the image, please tell me whether this image shows age-related macular degeneration (AMD), then give justifications. Follow the format: AMD / NON-AMD; Explanation: <JUSTIFICATION>."
+    }
+  ]
+}

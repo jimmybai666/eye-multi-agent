@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>眼科多智能体诊断系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a5276',
+                        'primary-hover': '#154360',
+                        secondary: '#2c81b9',
+                        'primary-light': '#eaf2f8',
+                        accent: '#e67e22',
+                        'accent-light': '#fef9e7',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* 加载旋转动画 */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+
+        /* 脉冲动画 */
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+
+        /* markdown 报告内的样式 */
+        .report-content h2 { font-size: 1.15rem; font-weight: 700; color: #1a5276; margin-top: 1.2rem; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid #d5d8dc; }
+        .report-content h3 { font-size: 1.05rem; font-weight: 600; color: #2c3e50; margin-top: 0.8rem; margin-bottom: 0.4rem; }
+        .report-content p { margin-bottom: 0.6rem; line-height: 1.7; color: #2c3e50; }
+        .report-content ul, .report-content ol { margin-left: 1.2rem; margin-bottom: 0.6rem; }
+        .report-content li { margin-bottom: 0.3rem; line-height: 1.6; color: #2c3e50; }
+        .report-content strong { color: #1a5276; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- ── 页眉 ────────────────────────────────────────── -->
+    <header class="bg-primary text-white shadow-lg">
+        <div class="max-w-4xl mx-auto px-6 py-5">
+            <h1 class="text-2xl font-bold tracking-wide">眼科多智能体诊断系统</h1>
+            <p class="text-blue-200 text-sm mt-1">Eye Multi-Agent Diagnostic System</p>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-8 space-y-6">
+
+        <!-- ── 输入区域 ──────────────────────────────────── -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">输入信息</h2>
+
+            <!-- 症状描述 -->
+            <div class="mb-4">
+                <label for="input-text" class="block text-sm font-medium text-gray-700 mb-1">症状描述 / 问题</label>
+                <textarea id="input-text" rows="3"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-secondary outline-none resize-none text-gray-800 placeholder-gray-400"
+                    placeholder="请输入症状描述或问题，例如：请分析这张眼底图片的异常..."></textarea>
+                <p id="input-error" class="text-red-500 text-xs mt-1 hidden">请输入症状描述或问题</p>
+            </div>
+
+            <!-- 图片上传 -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-1">眼科图片（可选）</label>
+                <div id="drop-zone"
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-secondary hover:bg-blue-50 transition-colors">
+                    <input type="file" id="file-input" accept="image/*" class="hidden">
+                    <svg class="mx-auto h-10 w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p class="text-gray-500 text-sm">拖拽图片到此处或<span class="text-secondary font-medium">点击上传</span></p>
+                    <p class="text-gray-400 text-xs mt-1">支持 JPG / PNG 格式</p>
+                </div>
+
+                <!-- 图片预览 -->
+                <div id="preview-area" class="hidden mt-3 flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                    <img id="preview-img" class="h-20 w-20 object-cover rounded-lg border" src="" alt="预览">
+                    <div class="flex-1 min-w-0">
+                        <p id="preview-name" class="text-sm text-gray-700 truncate"></p>
+                        <p class="text-xs text-green-600 mt-0.5">上传成功</p>
+                    </div>
+                    <button id="remove-btn" class="text-gray-400 hover:text-red-500 p-1" title="移除图片">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 上传错误提示 -->
+            <div id="upload-error" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p class="text-red-600 text-sm" id="upload-error-text"></p>
+            </div>
+
+            <!-- 提交按钮 -->
+            <button id="submit-btn"
+                class="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                开始诊断
+            </button>
+        </section>
+
+        <!-- ── 进度面板 ──────────────────────────────────── -->
+        <section id="progress-panel" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">诊断进度</h2>
+
+            <div class="space-y-3" id="progress-nodes">
+                <!-- 5 个节点 -->
+                <div class="flex items-center gap-3" data-node="supervisor">
+                    <span class="node-icon text-lg w-6 text-center">○</span>
+                    <div class="flex-1">
+                        <span class="font-medium text-gray-700">Supervisor</span>
+                        <span class="text-gray-400 text-sm ml-1">— 场景识别</span>
+                        <span class="node-detail text-xs text-secondary ml-2"></span>
+                    </div>
+                    <span class="node-time text-xs text-gray-400"></span>
+                </div>
+                <div class="flex items-center gap-3" data-node="vision">
+                    <span class="node-icon text-lg w-6 text-center">○</span>
+                    <div class="flex-1">
+                        <span class="font-medium text-gray-700">Vision</span>
+                        <span class="text-gray-400 text-sm ml-1">— 图像分析</span>
+                        <span class="node-detail text-xs text-secondary ml-2"></span>
+                    </div>
+                    <span class="node-time text-xs text-gray-400"></span>
+                </div>
+                <div class="flex items-center gap-3" data-node="clinical">
+                    <span class="node-icon text-lg w-6 text-center">○</span>
+                    <div class="flex-1">
+                        <span class="font-medium text-gray-700">Clinical</span>
+                        <span class="text-gray-400 text-sm ml-1">— 临床推理</span>
+                        <span class="node-detail text-xs text-secondary ml-2"></span>
+                    </div>
+                    <span class="node-time text-xs text-gray-400"></span>
+                </div>
+                <div class="flex items-center gap-3" data-node="critic">
+                    <span class="node-icon text-lg w-6 text-center">○</span>
+                    <div class="flex-1">
+                        <span class="font-medium text-gray-700">Critic</span>
+                        <span class="text-gray-400 text-sm ml-1">— 交叉审核</span>
+                        <span class="node-detail text-xs text-secondary ml-2"></span>
+                    </div>
+                    <span class="node-time text-xs text-gray-400"></span>
+                </div>
+                <div class="flex items-center gap-3" data-node="report">
+                    <span class="node-icon text-lg w-6 text-center">○</span>
+                    <div class="flex-1">
+                        <span class="font-medium text-gray-700">Report</span>
+                        <span class="text-gray-400 text-sm ml-1">— 报告生成</span>
+                        <span class="node-detail text-xs text-secondary ml-2"></span>
+                    </div>
+                    <span class="node-time text-xs text-gray-400"></span>
+                </div>
+            </div>
+
+            <!-- 总耗时 -->
+            <div class="mt-4 pt-3 border-t border-gray-100 text-center">
+                <span class="text-sm text-gray-500">已等待 <span id="elapsed-time" class="font-mono text-secondary font-semibold">0</span> 秒</span>
+            </div>
+        </section>
+
+        <!-- ── 错误提示 ──────────────────────────────────── -->
+        <section id="error-panel" class="hidden bg-red-50 border border-red-200 rounded-xl p-5">
+            <div class="flex items-start gap-3">
+                <svg class="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="text-red-700 font-medium">诊断请求失败</p>
+                    <p id="error-text" class="text-red-600 text-sm mt-1"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── 结果面板 ──────────────────────────────────── -->
+        <section id="result-panel" class="hidden space-y-5">
+
+            <!-- 结果头部 -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span id="route-badge" class="px-3 py-1 rounded-full text-sm font-semibold"></span>
+                    <span id="iteration-badge" class="text-sm text-gray-500 hidden">Critic 迭代: <span id="iteration-count" class="font-semibold text-secondary">0</span> 次</span>
+                </div>
+            </div>
+
+            <!-- reject 原因 -->
+            <div id="reject-card" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-5">
+                <div class="flex items-start gap-3">
+                    <svg class="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div>
+                        <p class="text-amber-800 font-medium">请求已拒绝</p>
+                        <p id="reject-reason" class="text-amber-700 text-sm mt-1"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Final Diagnosis 高亮框 -->
+            <div id="diagnosis-card" class="hidden bg-accent-light border-l-4 border-accent rounded-r-xl p-5">
+                <h3 class="text-accent font-bold text-base mb-2">Final Diagnosis</h3>
+                <p id="diagnosis-text" class="text-gray-800 leading-relaxed"></p>
+            </div>
+
+            <!-- 完整报告 -->
+            <div id="report-card" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-primary mb-4">完整报告</h2>
+                <div id="report-content" class="report-content"></div>
+            </div>
+
+            <!-- PDF 下载 -->
+            <div id="pdf-card" class="hidden">
+                <button id="download-pdf"
+                    class="w-full bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    下载 PDF 报告
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ── 页脚 ────────────────────────────────────────── -->
+    <footer class="max-w-4xl mx-auto px-6 py-6 text-center">
+        <p class="text-gray-400 text-xs">AI 辅助诊断工具 — 不替代专业医疗判断 | Eye Multi-Agent Diagnostic System</p>
+    </footer>
+
+    <!-- ── JavaScript ──────────────────────────────────── -->
+    <script>
+    (function() {
+        'use strict';
+
+        // ── 状态 ─────────────────────────────────────
+        let uploadedImagePath = null;
+        let uploadedImageUrl = null;
+        let isLoading = false;
+        let currentPdfPath = null;
+        let elapsedTimer = null;
+        let nodeStartTimes = {};
+        let globalStartTime = null;
+
+        // ── DOM 元素 ─────────────────────────────────
+        const inputText = document.getElementById('input-text');
+        const inputError = document.getElementById('input-error');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewArea = document.getElementById('preview-area');
+        const previewImg = document.getElementById('preview-img');
+        const previewName = document.getElementById('preview-name');
+        const removeBtn = document.getElementById('remove-btn');
+        const uploadError = document.getElementById('upload-error');
+        const uploadErrorText = document.getElementById('upload-error-text');
+        const submitBtn = document.getElementById('submit-btn');
+        const progressPanel = document.getElementById('progress-panel');
+        const elapsedTimeEl = document.getElementById('elapsed-time');
+        const errorPanel = document.getElementById('error-panel');
+        const errorText = document.getElementById('error-text');
+        const resultPanel = document.getElementById('result-panel');
+        const routeBadge = document.getElementById('route-badge');
+        const iterationBadge = document.getElementById('iteration-badge');
+        const iterationCount = document.getElementById('iteration-count');
+        const rejectCard = document.getElementById('reject-card');
+        const rejectReason = document.getElementById('reject-reason');
+        const diagnosisCard = document.getElementById('diagnosis-card');
+        const diagnosisText = document.getElementById('diagnosis-text');
+        const reportCard = document.getElementById('report-card');
+        const reportContent = document.getElementById('report-content');
+        const pdfCard = document.getElementById('pdf-card');
+        const downloadPdf = document.getElementById('download-pdf');
+
+        // ── 图片上传 ─────────────────────────────────
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-secondary', 'bg-blue-50');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-secondary', 'bg-blue-50');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-secondary', 'bg-blue-50');
+            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        });
+
+        removeBtn.addEventListener('click', () => {
+            uploadedImagePath = null;
+            uploadedImageUrl = null;
+            fileInput.value = '';
+            previewArea.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+        });
+
+        async function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showUploadError('请上传图片文件（JPG / PNG）');
+                return;
+            }
+
+            uploadError.classList.add('hidden');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error(`上传失败 (${res.status})`);
+
+                const data = await res.json();
+                uploadedImagePath = data.image_path;
+                uploadedImageUrl = data.image_url;
+
+                previewImg.src = data.image_url;
+                previewName.textContent = data.filename;
+                previewArea.classList.remove('hidden');
+                dropZone.classList.add('hidden');
+            } catch (err) {
+                showUploadError(err.message || '图片上传失败，请重试');
+            }
+        }
+
+        function showUploadError(msg) {
+            uploadErrorText.textContent = msg;
+            uploadError.classList.remove('hidden');
+            setTimeout(() => uploadError.classList.add('hidden'), 5000);
+        }
+
+        // ── 诊断提交 ─────────────────────────────────
+
+        submitBtn.addEventListener('click', startDiagnosis);
+
+        async function startDiagnosis() {
+            const text = inputText.value.trim();
+            if (!text) {
+                inputError.classList.remove('hidden');
+                inputText.classList.add('border-red-400');
+                return;
+            }
+            inputError.classList.add('hidden');
+            inputText.classList.remove('border-red-400');
+
+            if (isLoading) return;
+            setLoading(true);
+            resetUI();
+
+            try {
+                const res = await fetch('/diagnose-stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        input: text,
+                        image_path: uploadedImagePath,
+                    }),
+                });
+
+                if (!res.ok) {
+                    throw new Error(`服务器错误 (${res.status})`);
+                }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const event = JSON.parse(line.slice(6));
+                                handleSSEEvent(event);
+                            } catch (e) {
+                                // 跳过无法解析的行
+                            }
+                        }
+                    }
+                }
+
+                // 处理 buffer 中剩余的数据
+                if (buffer.startsWith('data: ')) {
+                    try {
+                        const event = JSON.parse(buffer.slice(6));
+                        handleSSEEvent(event);
+                    } catch (e) {}
+                }
+
+            } catch (err) {
+                showError(err.message || '网络错误，请检查连接');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // ── SSE 事件处理 ─────────────────────────────
+
+        function handleSSEEvent(event) {
+            if (event.type === 'node_complete') {
+                markNodeComplete(event.node, event.data || {});
+            } else if (event.type === 'done') {
+                renderResults(event.data);
+            } else if (event.type === 'error') {
+                showError(event.data?.message || '诊断过程中发生错误');
+            }
+        }
+
+        // ── 进度面板 ─────────────────────────────────
+
+        const NODE_ORDER = ['supervisor', 'vision', 'clinical', 'critic', 'report'];
+        const ROUTE_LABELS = { diagnosis: '诊断模式', qa: '问答模式', reject: '已拒绝' };
+        const ROUTE_COLORS = {
+            diagnosis: 'bg-blue-100 text-blue-800',
+            qa: 'bg-green-100 text-green-800',
+            reject: 'bg-red-100 text-red-800',
+        };
+
+        function resetProgress() {
+            NODE_ORDER.forEach(name => {
+                const row = document.querySelector(`[data-node="${name}"]`);
+                if (!row) return;
+                row.querySelector('.node-icon').textContent = '○';
+                row.querySelector('.node-icon').className = 'node-icon text-lg w-6 text-center text-gray-300';
+                row.querySelector('.node-detail').textContent = '';
+                row.querySelector('.node-time').textContent = '';
+                row.classList.remove('opacity-40');
+            });
+            nodeStartTimes = {};
+        }
+
+        function markNodeRunning(name) {
+            const row = document.querySelector(`[data-node="${name}"]`);
+            if (!row) return;
+            const icon = row.querySelector('.node-icon');
+            icon.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-secondary border-t-transparent rounded-full spinner"></span>';
+            icon.className = 'node-icon text-lg w-6 text-center';
+            nodeStartTimes[name] = Date.now();
+        }
+
+        function markNodeComplete(name, data) {
+            const row = document.querySelector(`[data-node="${name}"]`);
+            if (!row) return;
+
+            // 标记完成
+            const icon = row.querySelector('.node-icon');
+            icon.textContent = '✓';
+            icon.className = 'node-icon text-lg w-6 text-center text-green-500 font-bold';
+
+            // 显示耗时
+            if (nodeStartTimes[name]) {
+                const elapsed = ((Date.now() - nodeStartTimes[name]) / 1000).toFixed(1);
+                row.querySelector('.node-time').textContent = `${elapsed}s`;
+            }
+
+            // 节点完成后的信息
+            const detail = row.querySelector('.node-detail');
+            if (name === 'supervisor' && data.route) {
+                detail.textContent = ROUTE_LABELS[data.route] || data.route;
+                // 根据 route 标记不适用的节点
+                activateNextNodes(data.route);
+            } else if (name === 'critic') {
+                if (data.approved === true) {
+                    detail.innerHTML = '<span class="text-green-600">通过</span>';
+                } else if (data.approved === false) {
+                    detail.innerHTML = '<span class="text-amber-600">需修改</span>';
+                }
+            }
+
+            // 标记下一个节点为运行中
+            startNextNode(name);
+        }
+
+        function activateNextNodes(route) {
+            if (route === 'qa') {
+                // qa 模式：vision 和 critic 不执行
+                ['vision', 'critic'].forEach(name => {
+                    const row = document.querySelector(`[data-node="${name}"]`);
+                    if (!row) return;
+                    const icon = row.querySelector('.node-icon');
+                    icon.textContent = '—';
+                    icon.className = 'node-icon text-lg w-6 text-center text-gray-300';
+                    row.querySelector('.node-detail').textContent = '跳过';
+                    row.classList.add('opacity-40');
+                });
+            } else if (route === 'reject') {
+                // reject：所有后续节点标记跳过
+                ['vision', 'clinical', 'critic', 'report'].forEach(name => {
+                    const row = document.querySelector(`[data-node="${name}"]`);
+                    if (!row) return;
+                    const icon = row.querySelector('.node-icon');
+                    icon.textContent = '—';
+                    icon.className = 'node-icon text-lg w-6 text-center text-gray-300';
+                    row.querySelector('.node-detail').textContent = '跳过';
+                    row.classList.add('opacity-40');
+                });
+            }
+        }
+
+        function startNextNode(completedNode) {
+            // 根据管线确定下一个要运行的节点
+            const currentRoute = document.querySelector('[data-node="supervisor"] .node-detail')?.textContent;
+
+            if (completedNode === 'supervisor') {
+                if (currentRoute === '诊断模式') {
+                    markNodeRunning('vision');
+                    markNodeRunning('clinical');
+                } else if (currentRoute === '问答模式') {
+                    markNodeRunning('clinical');
+                }
+            } else if (completedNode === 'vision' || completedNode === 'clinical') {
+                // diagnosis 模式下，等两个都完成才启动 critic
+                if (currentRoute === '诊断模式') {
+                    const visionDone = document.querySelector('[data-node="vision"] .node-icon').textContent === '✓';
+                    const clinicalDone = document.querySelector('[data-node="clinical"] .node-icon').textContent === '✓';
+                    if (visionDone && clinicalDone) {
+                        markNodeRunning('critic');
+                    }
+                } else if (currentRoute === '问答模式' && completedNode === 'clinical') {
+                    markNodeRunning('report');
+                }
+            } else if (completedNode === 'critic') {
+                markNodeRunning('report');
+            }
+        }
+
+        // ── 结果渲染 ─────────────────────────────────
+
+        function renderResults(data) {
+            if (!data) return;
+            resultPanel.classList.remove('hidden');
+
+            // route badge
+            const route = data.route || 'unknown';
+            routeBadge.textContent = ROUTE_LABELS[route] || route;
+            routeBadge.className = `px-3 py-1 rounded-full text-sm font-semibold ${ROUTE_COLORS[route] || 'bg-gray-100 text-gray-800'}`;
+
+            // iteration count
+            if (data.iteration_count != null && data.iteration_count > 0) {
+                iterationCount.textContent = data.iteration_count;
+                iterationBadge.classList.remove('hidden');
+            }
+
+            if (route === 'reject') {
+                rejectReason.textContent = data.reason || '无具体原因';
+                rejectCard.classList.remove('hidden');
+                return;
+            }
+
+            // Final Diagnosis
+            if (data.final_diagnosis) {
+                diagnosisText.textContent = data.final_diagnosis;
+                diagnosisCard.classList.remove('hidden');
+            }
+
+            // Report (markdown → HTML)
+            if (data.report) {
+                marked.setOptions({ breaks: true, gfm: true });
+                reportContent.innerHTML = marked.parse(data.report);
+                reportCard.classList.remove('hidden');
+            }
+
+            // PDF download
+            if (data.pdf_path) {
+                currentPdfPath = data.pdf_path;
+                pdfCard.classList.remove('hidden');
+            }
+        }
+
+        // ── PDF 下载 ─────────────────────────────────
+
+        downloadPdf.addEventListener('click', () => {
+            if (currentPdfPath) {
+                window.open('/download-report?path=' + encodeURIComponent(currentPdfPath), '_blank');
+            }
+        });
+
+        // ── UI 辅助 ──────────────────────────────────
+
+        function setLoading(loading) {
+            isLoading = loading;
+            if (loading) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `
+                    <span class="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full spinner"></span>
+                    诊断中...
+                `;
+                submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+                progressPanel.classList.remove('hidden');
+                globalStartTime = Date.now();
+                elapsedTimer = setInterval(() => {
+                    const secs = Math.floor((Date.now() - globalStartTime) / 1000);
+                    elapsedTimeEl.textContent = secs;
+                }, 1000);
+                // 第一个节点开始运行
+                markNodeRunning('supervisor');
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    开始诊断
+                `;
+                submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                if (elapsedTimer) {
+                    clearInterval(elapsedTimer);
+                    elapsedTimer = null;
+                }
+            }
+        }
+
+        function resetUI() {
+            errorPanel.classList.add('hidden');
+            resultPanel.classList.add('hidden');
+            rejectCard.classList.add('hidden');
+            diagnosisCard.classList.add('hidden');
+            reportCard.classList.add('hidden');
+            pdfCard.classList.add('hidden');
+            iterationBadge.classList.add('hidden');
+            currentPdfPath = null;
+            reportContent.innerHTML = '';
+            resetProgress();
+        }
+
+        function showError(msg) {
+            errorText.textContent = msg;
+            errorPanel.classList.remove('hidden');
+        }
+
+    })();
+    </script>
+</body>
+</html>
